@@ -18,3 +18,7 @@ func TestGetTags(t *testing.T) {
 	db.Where("id = ?", id).First(&tag)
 	fmt.Println("tag:", tag)
 }
+func TestAddTag(t *testing.T) {
+	res := AddTag("test", 1, "create_test")
+	fmt.Println(res)
+}
