@@ -2,6 +2,7 @@ package logging
 
 import (
 	"fmt"
+	"go-gin-example/pkg/setting"
 	"log"
 	"os"
 	"time"
@@ -15,7 +16,8 @@ var (
 )
 
 func getLogFilePath() string {
-	return fmt.Sprintf("%s", LogSavePath)
+	//return fmt.Sprintf("%s", LogSavePath)
+	return fmt.Sprintf("%S%S", setting.AppSetting.RuntimeRootPath, setting.AppSetting.LogSavePath)
 }
 func getLogFileFullPath() string {
 	prefixPath := getLogFilePath()
