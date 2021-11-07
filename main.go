@@ -11,6 +11,9 @@ import (
 	"net/http"
 )
 
+// @title Golang Gin API
+// @version 1.0
+// @description An example of gin
 func main() {
 	router := routers.InitRouter()
 
@@ -20,7 +23,7 @@ func main() {
 
 	readTimeout := setting.ServerSetting.ReadTimeout
 	writeTimeout := setting.ServerSetting.WriteTimeout
-	endPoint := fmt.Sprintf("%d", setting.ServerSetting.HttpPort)
+	endPoint := fmt.Sprintf(":%d", setting.ServerSetting.HttpPort)
 	maxHeaderBytes := 1 << 20
 
 	s := &http.Server{
