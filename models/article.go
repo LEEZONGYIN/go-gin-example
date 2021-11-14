@@ -31,40 +31,56 @@ func (article *Article) BeforeUpdate(scope *gorm.Scope) error {
 	return nil
 }
 
-func ExistArticleByID(id int) bool {
+func ExistArticleByID(id int) (bool, error) {
 	var article Article
-	db.Select("id").Where("id = ?", id).First(&article)
-	if article.ID > 0 {
-		return true
+	err := db.Select("id").Where("id = ? And deleted_on = ?", id, 0).First(&article).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return false, err
 	}
-	return false
+	if article.ID > 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 //  统计文章总数
-func GetArticleTotal(maps interface{}) (count int) {
-	db.Model(&Article{}).Where(maps).Count(&count)
-	return
+func GetArticleTotal(maps interface{}) (int, error) {
+	var count int
+	if err := db.Model(&Article{}).Where(maps).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
-func GetArticles(pageNum int, pageSize int, maps interface{}) (articles []Article) {
-	db.Preloads("Tag").Where(maps).Offset(pageNum).Limit(pageSize).Find(&articles)
-	return
+func GetArticles(pageNum int, pageSize int, maps interface{}) ([]*Article, error) {
+	var articles []*Article
+	err := db.Preloads("Tag").Where(maps).Offset(pageNum).Limit(pageSize).Find(&articles).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+	return articles, nil
 }
 
 // 获取单个文章
-func GetArticle(id int) (article Article) {
+func GetArticle(id int) (*Article, error) {
+	var article Article
 	db.Where("id = ?", id).First(&article)
-	db.Model(&article).Related(&article.Tag)
-	return
+	err := db.Model(&article).Related(&article.Tag).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+	return &article, nil
 }
 
-func EditArticle(id int, data interface{}) bool {
-	db.Model(&Article{}).Where("id=?", id).Update(data)
-	return true
+func EditArticle(id int, data interface{}) error {
+	if err := db.Model(&Article{}).Where("id=?", id).Update(data).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
-func AddArticle(data map[string]interface{}) bool {
-	db.Create(&Article{
+func AddArticle(data map[string]interface{}) error {
+	article := Article{
 		TagID:         data["tag_id"].(int),
 		Title:         data["title"].(string),
 		Desc:          data["desc"].(string),
@@ -72,16 +88,23 @@ func AddArticle(data map[string]interface{}) bool {
 		CreatedBy:     data["created_by"].(string),
 		State:         data["state"].(int),
 		CoverImageUrl: data["cover_image_url"].(string),
-	})
-	return true
+	}
+	if err := db.Create(&article).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
-func DeleteArticle(id int) bool {
-	db.Where("id=?", id).Delete(&Article{})
-	return true
+func DeleteArticle(id int) error {
+	if err := db.Where("id=?", id).Delete(&Article{}).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
-func CleanAllArticle() bool {
-	db.Unscoped().Where("deleted_on != ?", 0).Delete(&Article{})
-	return true
+func CleanAllArticle() error {
+	if err := db.Unscoped().Where("deleted_on != ?", 0).Delete(&Article{}).Error; err != nil {
+		return err
+	}
+	return nil
 }
