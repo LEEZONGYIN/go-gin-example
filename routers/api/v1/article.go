@@ -1,10 +1,11 @@
 package v1
 
 import (
-	"go-gin-example/models"
+	"github.com/EDDYCJY/go-gin-example/service/tag_service"
+	"go-gin-example/pkg/app"
 	"go-gin-example/pkg/e"
-	"go-gin-example/pkg/logging"
 	"go-gin-example/pkg/setting"
+	"go-gin-example/service/article_service"
 	"go-gin-example/util"
 	"net/http"
 
@@ -19,30 +20,34 @@ import (
 // @Success 200 {string} json "{"code":200,"data":{},"msg":"ok"}"
 // @Router /api/v1/articles/{id} [get]
 func GetArticle(c *gin.Context) {
+	appG := app.Gin{c}
 	id := com.StrTo(c.Param("id")).MustInt()
 	valid := validation.Validation{}
 	valid.Min(id, 1, "id").Message("id必须大于0")
 
-	var data interface{}
-	code := e.INVALID_PARAMS
-	if !valid.HasErrors() {
-		if models.ExistArticleByID(id) {
-			data = models.GetArticle(id)
-			code = e.SUCCESS
-		} else {
-			code = e.ERROR_NOT_EXIST_ARTICLE
-		}
-	} else {
-		for _, err := range valid.Errors {
-			logging.Info(err.Key, err.Message)
-
-		}
+	if valid.HasErrors() {
+		app.MarkErrors(valid.Errors)
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"data": data,
-		"msg":  e.GetMsg(code),
-	})
+
+	articleService := article_service.Article{ID: id}
+	exists, err := articleService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_CHECK_EXIST_ARTICLE_FAIL, nil)
+		return
+	}
+
+	if !exists {
+		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_ARTICLE, nil)
+		return
+	}
+	article, err := articleService.Get()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_GET_ARTICLES_FAIL, nil)
+	}
+	appG.Response(http.StatusOK, e.SUCCESS, article)
+
 }
 
 // @Summary Get multiple articles
@@ -53,6 +58,8 @@ func GetArticle(c *gin.Context) {
 // @Success 200 {string} json "{"code":200,"data":{},"msg":"ok"}"
 // @Router /api/v1/articles [get]
 func GetArticles(c *gin.Context) {
+	appG := app.Gin{c}
+
 	data := make(map[string]interface{})
 	maps := make(map[string]interface{})
 	valid := validation.Validation{}
@@ -71,21 +78,30 @@ func GetArticles(c *gin.Context) {
 		valid.Min(tagId, 1, "tag_id").Message("标签ID必须大于0")
 	}
 
-	code := e.INVALID_PARAMS
-	if !valid.HasErrors() {
-		code = e.SUCCESS
-		data["lists"] = models.GetArticles(util.GetPage(c), setting.AppSetting.PageSize, maps)
-		data["total"] = models.GetArticleTotal(maps)
-	} else {
-		for _, err := range valid.Errors {
-			logging.Info(err.Key, err.Message)
-		}
+	if valid.HasErrors() {
+		app.MarkErrors(valid.Errors)
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"data": data,
-		"msg":  e.GetMsg(code),
-	})
+	articleService := article_service.Article{
+		TagId:    tagId,
+		State:    state,
+		PageSize: setting.AppSetting.PageSize,
+		PageNum:  util.GetPage(c),
+	}
+	total, err := articleService.Count()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_COUNT_ARTICLE_FAIL, nil)
+		return
+	}
+	articles, err := articleService.GetAll()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_GET_ARTICLES_FAIL, nil)
+		return
+	}
+	data["lists"] = articles
+	data["total"] = total
+	appG.Response(http.StatusOK, e.SUCCESS, data)
 }
 
 // @Summary Add article
@@ -99,6 +115,7 @@ func GetArticles(c *gin.Context) {
 // @Success 200 {string} json "{"code":200,"data":{},"msg":"ok"}"
 // @Router /api/v1/articles [post]
 func AddArticle(c *gin.Context) {
+	appG := app.Gin{c}
 	tagId := com.StrTo(c.Query("tag_id")).MustInt()
 	title := c.Query("title")
 	desc := c.Query("desc")
@@ -116,35 +133,35 @@ func AddArticle(c *gin.Context) {
 	valid.Required(createdBy, "created_by").Message("创建人不能为空")
 	valid.Range(state, 0, 1, "state").Message("状态只能为0或1")
 
-	code := e.INVALID_PARAMS
-	if !valid.HasErrors() {
-		if !models.ExistTagById(tagId) {
-			data := make(map[string]interface{})
-			data["tag_id"] = tagId
-			data["title"] = title
-			data["desc"] = desc
-			data["content"] = content
-			data["coverImageUrl"] = coverImageUrl
-			data["created_by"] = createdBy
-			data["state"] = state
-
-			models.AddArticle(data)
-			code = e.SUCCESS
-		} else {
-			code = e.ERROR_NOT_EXIST_ARTICLE
-		}
-	} else {
-		for _, err := range valid.Errors {
-			logging.Info(err.Key, err.Message)
-		}
+	if valid.HasErrors() {
+		app.MarkErrors(valid.Errors)
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"data": make(map[string]interface{}),
-		"msg":  e.GetMsg(code),
-	})
-
+	tagService := tag_service.Tag{ID: tagId}
+	exists, err := tagService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_EXIST_TAG_FAIL, nil)
+		return
+	}
+	if !exists {
+		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_TAG, nil)
+		return
+	}
+	articleService := article_service.Article{
+		TagId:         tagId,
+		Title:         title,
+		Desc:          desc,
+		Content:       content,
+		CoverImageUrl: coverImageUrl,
+		State:         state,
+	}
+	if err := articleService.Add(); err != nil {
+		appG.Response(http.StatusOK, e.ERROR_ADD_ARTICLE_FAIL, nil)
+		return
+	}
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }
 
 // @Summary Update article
@@ -159,6 +176,7 @@ func AddArticle(c *gin.Context) {
 // @Success 200 {string} json "{"code":200,"data":{},"msg":"ok"}"
 // @Router /api/v1/articles/{id} [put]
 func EditArticle(c *gin.Context) {
+	appG := app.Gin{c}
 	id := com.StrTo(c.Param("id")).MustInt()
 	tagId := com.StrTo(c.Query("tag_id")).MustInt()
 	title := c.Query("title")
@@ -185,38 +203,40 @@ func EditArticle(c *gin.Context) {
 		valid.Range(state, 0, 1, "state").Message("state只能为0或1")
 	}
 
-	code := e.INVALID_PARAMS
-	if !valid.HasErrors() {
-		if models.ExistArticleByID(id) {
-			data := make(map[string]interface{})
-			if tagId > 0 {
-				data["tag_id"] = tagId
-			}
-			if title != "" {
-				data["title"] = title
-			}
-			if desc != "" {
-				data["desc"] = desc
-			}
-			if content != "" {
-				data["content"] = content
-			}
-			data["modified_by"] = modifiedBy
-			models.EditArticle(id, data)
-			code = e.SUCCESS
-		} else {
-			code = e.ERROR_NOT_EXIST_ARTICLE
-		}
-	} else {
-		for _, err := range valid.Errors {
-			logging.Info(err.Key, err.Message)
-		}
+	if valid.HasErrors() {
+		app.MarkErrors(valid.Errors)
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"data": make(map[string]string),
-		"msg":  e.GetMsg(code),
-	})
+	articleService := article_service.Article{
+		ID:            id,
+		Title:         title,
+		Desc:          desc,
+		Content:       content,
+		CoverImageUrl: coverImageUrl,
+		ModifiedBy:    modifiedBy,
+	}
+	exists, err := articleService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_CHECK_EXIST_ARTICLE_FAIL, nil)
+		return
+	}
+	tagService := tag_service.Tag{ID: tagId}
+	exists, err = tagService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_EXIST_TAG_FAIL, nil)
+		return
+	}
+	if !exists {
+		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_TAG, nil)
+		return
+	}
+	err = articleService.Edit()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_EDIT_ARTICLE_FAIL, nil)
+		return
+	}
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }
 
 // @Summary Delete article
@@ -225,28 +245,31 @@ func EditArticle(c *gin.Context) {
 // @Success 200 {string} json "{"code":200,"data":{},"msg":"ok"}"
 // @Router /api/v1/articles/{id} [delete]
 func DeleteArticle(c *gin.Context) {
+	appG := app.Gin{c}
 	id := com.StrTo(c.Param("id")).MustInt()
 
 	valid := validation.Validation{}
 	valid.Min(id, 0, "id").Message("id不能小于1")
 
-	code := e.INVALID_PARAMS
-	if !valid.HasErrors() {
-		if models.ExistArticleByID(id) {
-			models.DeleteArticle(id)
-			code = e.SUCCESS
-		} else {
-			code = e.ERROR_NOT_EXIST_ARTICLE
-		}
-	} else {
-		for _, err := range valid.Errors {
-			logging.Info(err.Key, err.Message)
-		}
+	if valid.HasErrors() {
+		app.MarkErrors(valid.Errors)
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"data": make(map[string]string),
-		"msg":  e.GetMsg(code),
-	})
+	articleService := article_service.Article{ID: id}
+	exists, err := articleService.ExistByID()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_CHECK_EXIST_ARTICLE_FAIL, nil)
+		return
+	}
+	if !exists {
+		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_ARTICLE, nil)
+		return
+	}
+	err = articleService.Delete()
+	if err != nil {
+		appG.Response(http.StatusOK, e.ERROR_DELETE_ARTICLE_FAIL, nil)
+		return
+	}
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }

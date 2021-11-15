@@ -56,7 +56,7 @@ type Redis struct {
 var RedisSetting = &Redis{}
 
 func Setup() {
-	Cfg, err := ini.Load("../conf/app.ini")
+	Cfg, err := ini.Load("conf/app.ini")
 	if err != nil {
 		log.Fatalf("Fail to parse 'conf/app.ini':%v", err)
 	}
