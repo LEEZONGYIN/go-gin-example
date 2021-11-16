@@ -5,6 +5,7 @@ import (
 	"go-gin-example/pkg/e"
 	"go-gin-example/pkg/setting"
 	"go-gin-example/service/article_service"
+	"go-gin-example/service/tag_service"
 	"go-gin-example/util"
 	"net/http"
 
@@ -139,7 +140,7 @@ func AddArticle(c *gin.Context) {
 	}
 
 	tagService := tag_service.Tag{ID: tagId}
-	exists, err := tagService.ExistByID()
+	exists, err := tagService.ExistTagById()
 	if err != nil {
 		appG.Response(http.StatusOK, e.ERROR_EXIST_TAG_FAIL, nil)
 		return
@@ -221,7 +222,7 @@ func EditArticle(c *gin.Context) {
 		return
 	}
 	tagService := tag_service.Tag{ID: tagId}
-	exists, err = tagService.ExistByID()
+	exists, err = tagService.ExistTagById()
 	if err != nil {
 		appG.Response(http.StatusOK, e.ERROR_EXIST_TAG_FAIL, nil)
 		return
