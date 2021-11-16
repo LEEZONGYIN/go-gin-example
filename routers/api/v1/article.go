@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"github.com/EDDYCJY/go-gin-example/service/tag_service"
 	"go-gin-example/pkg/app"
 	"go-gin-example/pkg/e"
 	"go-gin-example/pkg/setting"
