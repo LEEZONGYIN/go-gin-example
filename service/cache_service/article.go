@@ -19,7 +19,7 @@ func (a *Article) GetArticleKey() string {
 	return e.CACHE_ARTICLE + "_" + strconv.Itoa(a.ID)
 }
 
-func (a *Article) GetArtclesKey() string {
+func (a *Article) GetArticlesKey() string {
 	keys := []string{
 		e.CACHE_ARTICLE,
 		"LIST",

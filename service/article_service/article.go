@@ -30,7 +30,7 @@ func (a *Article) Add() error {
 		"title":           a.Title,
 		"desc":            a.Desc,
 		"content":         a.Content,
-		"cover_iamge_url": a.CoverImageUrl,
+		"cover_image_url": a.CoverImageUrl,
 		"state":           a.State,
 	}
 	if err := models.AddArticle(article); err != nil {
@@ -54,8 +54,8 @@ func (a *Article) Get() (*models.Article, error) {
 	var cacheArticle *models.Article
 
 	cache := cache_service.Article{ID: a.ID}
-	key := cache.GetArtclesKey()
-	// 缓存中存在 从缓存中获取
+	key := cache.GetArticlesKey()
+	// 如果缓存中存在 从缓存中获取
 	if gredis.Exists(key) {
 		data, err := gredis.Get(key)
 		if err != nil {
@@ -88,7 +88,7 @@ func (a *Article) GetAll() ([]*models.Article, error) {
 		PageNum:  a.PageNum,
 		PageSize: a.PageSize,
 	}
-	key := cache.GetArtclesKey()
+	key := cache.GetArticlesKey()
 	if gredis.Exists(key) {
 		data, err := gredis.Get(key)
 		if err != nil {
