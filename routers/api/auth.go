@@ -2,8 +2,8 @@ package api
 
 import (
 	"go-gin-example/models"
+	"go-gin-example/pkg/app"
 	"go-gin-example/pkg/e"
-	"go-gin-example/pkg/logging"
 	"go-gin-example/util"
 	"net/http"
 
@@ -17,6 +17,8 @@ type auth struct {
 }
 
 func GetAuth(c *gin.Context) {
+	appG := app.Gin{c}
+
 	username := c.Query("username")
 	password := c.Query("password")
 
@@ -24,29 +26,30 @@ func GetAuth(c *gin.Context) {
 	a := auth{Username: username, Password: password}
 	ok, _ := valid.Valid(&a)
 
-	data := make(map[string]interface{})
-	code := e.INVALID_PARAMS
-	if ok {
-		isExist := models.CheckAuth(username, password)
-		if isExist {
-			token, err := util.GenerateToken(username, password)
-			if err != nil {
-				code = e.ERROR_AUTH_TOKEN
-			} else {
-				data["token"] = token
-				code = e.SUCCESS
-			}
-		} else {
-			code = e.ERROR_AUTH
-		}
-	} else {
-		for _, err := range valid.Errors {
-			logging.Info(err.Key, err.Message)
-		}
+	if !ok {
+		app.MarkErrors(valid.Errors)
+		appG.Response(http.StatusBadRequest, e.INVALID_PARAMS, nil)
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"data": data,
-		"msg":  e.GetMsg(code),
+
+	isExist, err := models.CheckAuth(username, password)
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_AUTH_CHECK_TOKEN_FAIL, nil)
+		return
+	}
+	if !isExist {
+		appG.Response(http.StatusUnauthorized, e.ERROR_AUTH, nil)
+		return
+	}
+
+	token, err := util.GenerateToken(username, password)
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_AUTH_TOKEN, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, e.SUCCESS, map[string]string{
+		"token": token,
 	})
+
 }

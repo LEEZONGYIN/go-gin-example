@@ -21,21 +21,13 @@ import (
 // @Router /api/v1/tags [get]
 func GetTags(c *gin.Context) {
 	appG := app.Gin{c}
-
 	name := c.Query("name")
-
-	maps := make(map[string]interface{})
-	data := make(map[string]interface{})
-
-	if name != "" {
-		maps["name"] = name
-	}
 
 	var state int = -1
 	if arg := c.Query("state"); arg != "" {
 		state = com.StrTo(arg).MustInt()
-		maps["state"] = state
 	}
+
 	tagService := tag_service.Tag{
 		Name:     name,
 		State:    state,
@@ -52,6 +44,8 @@ func GetTags(c *gin.Context) {
 		appG.Response(http.StatusOK, e.ERROR_COUNT_TAG_FAIL, nil)
 		return
 	}
+
+	data := make(map[string]interface{})
 
 	data["lists"] = tags
 	data["total"] = count
