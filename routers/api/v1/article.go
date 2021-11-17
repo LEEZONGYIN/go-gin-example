@@ -116,13 +116,13 @@ func GetArticles(c *gin.Context) {
 // @Router /api/v1/articles [post]
 func AddArticle(c *gin.Context) {
 	appG := app.Gin{c}
-	tagId := com.StrTo(c.Query("tag_id")).MustInt()
-	title := c.Query("title")
-	desc := c.Query("desc")
-	content := c.Query("content")
+	tagId := com.StrTo(c.PostForm("tag_id")).MustInt()
+	title := c.PostForm("title")
+	desc := c.PostForm("desc")
+	content := c.PostForm("content")
 	coverImageUrl := c.PostForm("cover_image_url")
-	createdBy := c.Query("created_by")
-	state := com.StrTo(c.DefaultQuery("state", "0")).MustInt()
+	createdBy := c.PostForm("created_by")
+	state := com.StrTo(c.DefaultPostForm("state", "0")).MustInt()
 
 	valid := validation.Validation{}
 	valid.Min(tagId, 0, "tag_id").Message("tagId不能小于0")

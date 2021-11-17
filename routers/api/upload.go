@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"go-gin-example/pkg/app"
 	"go-gin-example/pkg/e"
 	"go-gin-example/pkg/logging"
 	"go-gin-example/pkg/upload"
@@ -9,51 +10,47 @@ import (
 )
 
 func UploadImage(c *gin.Context) {
-	code := e.SUCCESS
-	data := make(map[string]string)
+	appG := app.Gin{c}
 
 	//获取上传的图片（返回提供的表单键的第一个文件）
 	file, image, err := c.Request.FormFile("image")
 	if err != nil {
 		logging.Warn(err)
-		code = e.ERROR
-		c.JSON(http.StatusOK, gin.H{
-			"code": code,
-			"msg":  e.GetMsg(code),
-			"data": data,
-		})
+		appG.Response(http.StatusOK, e.ERROR, nil)
 	}
 
 	if image == nil {
-		code = e.INVALID_PARAMS
-	} else {
-		imageName := upload.GetImageName(image.Filename)
-		fullpath := upload.GetImageFullPath()
-		savePath := upload.GetImagePath()
-
-		src := fullpath + imageName
-		//CheckImageExt、CheckImageSize检查图片大小，检查图片后缀
-		if !upload.CheckImageExt(imageName) || !upload.CheckImageSize(file) {
-			code = e.ERROR_UPLOAD_CHECK_IMAGE_FORMAT
-		} else {
-			//检查上传图片所需（权限、文件夹）
-			err := upload.CheckImage(fullpath)
-			if err != nil {
-				logging.Warn(err)
-				code = e.ERROR_UPLOAD_CHECK_IMAGE_FAIL
-				//保存图片
-			} else if err := c.SaveUploadedFile(image, src); err != nil {
-				logging.Warn(err)
-				code = e.ERROR_UPLOAD_SAVE_IMAGE_FAIL
-			} else {
-				data["image_url"] = upload.GetImageFullUrl(imageName)
-				data["image_save_url"] = savePath + imageName
-			}
-		}
+		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code": code,
-		"msg":  e.GetMsg(code),
-		"data": data,
+
+	imageName := upload.GetImageName(image.Filename)
+	fullpath := upload.GetImageFullPath()
+	savePath := upload.GetImagePath()
+	src := fullpath + imageName
+
+	if !upload.CheckImageExt(imageName) || !upload.CheckImageSize(file) {
+		appG.Response(http.StatusOK, e.ERROR_UPLOAD_CHECK_IMAGE_FORMAT, nil)
+		return
+	}
+
+	err = upload.CheckImage(fullpath)
+	if err != nil {
+		logging.Warn(err)
+		appG.Response(http.StatusOK, e.ERROR_UPLOAD_CHECK_IMAGE_FAIL, nil)
+		return
+	}
+
+	err = c.SaveUploadedFile(image, src)
+	if err != nil {
+		logging.Warn(err)
+		appG.Response(http.StatusOK, e.ERROR_UPLOAD_CHECK_IMAGE_FAIL, nil)
+		return
+	}
+
+	appG.Response(http.StatusOK, e.SUCCESS, map[string]string{
+		"image_url":      upload.GetImageFullUrl(imageName),
+		"image_save_url": savePath + imageName,
 	})
+
 }
