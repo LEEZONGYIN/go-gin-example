@@ -47,6 +47,8 @@ func InitRouter() *gin.Engine {
 		apiv1.DELETE("/articles/:id", v1.DeleteArticle)
 		//新建指定文章
 		apiv1.POST("/articles", v1.AddArticle)
+		//导出标签
+		r.POST("/tags/export", v1.ExportTag)
 	}
 	return r
 }
