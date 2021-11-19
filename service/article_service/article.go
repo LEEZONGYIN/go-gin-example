@@ -32,6 +32,7 @@ func (a *Article) Add() error {
 		"content":         a.Content,
 		"cover_image_url": a.CoverImageUrl,
 		"state":           a.State,
+		"created_by":      a.CreatedBy,
 	}
 	if err := models.AddArticle(article); err != nil {
 		return err
