@@ -3,6 +3,7 @@ module go-gin-example
 go 1.16
 
 require (
+	github.com/360EntSecGroup-Skylar/excelize v1.4.1
 	github.com/PuerkitoBio/purell v1.1.1-0.20180310210909-975f53781597 // indirect
 	github.com/astaxie/beego v1.12.3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible

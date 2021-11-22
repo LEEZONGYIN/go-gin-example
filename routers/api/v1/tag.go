@@ -4,6 +4,7 @@ import (
 	"go-gin-example/pkg/app"
 	"go-gin-example/pkg/e"
 	"go-gin-example/pkg/export"
+	"go-gin-example/pkg/logging"
 	"go-gin-example/pkg/setting"
 	"go-gin-example/service/tag_service"
 	"go-gin-example/util"
@@ -206,6 +207,7 @@ func ExportTag(c *gin.Context) {
 	}
 	filename, err := tagService.Export()
 	if err != nil {
+		logging.Info(err)
 		appG.Response(http.StatusOK, e.ERROR_EXPORT_TAG_FAIL, nil)
 		return
 	}
@@ -213,4 +215,23 @@ func ExportTag(c *gin.Context) {
 		"export_url":      export.GetExcelFullUrl(filename),
 		"export_save_url": export.GetExcelPath() + filename,
 	})
+}
+
+func ImportTag(c *gin.Context) {
+	appG := app.Gin{C: c}
+
+	file, _, err := c.Request.FormFile("file")
+	if err != nil {
+		logging.Warn(err)
+		appG.Response(http.StatusOK, e.ERROR, nil)
+		return
+	}
+	tagService := tag_service.Tag{}
+	err = tagService.Import(file)
+	if err != nil {
+		logging.Warn(err)
+		appG.Response(http.StatusOK, e.ERROR_IMPORT_TAG_FAIL, nil)
+		return
+	}
+	appG.Response(http.StatusOK, e.SUCCESS, nil)
 }

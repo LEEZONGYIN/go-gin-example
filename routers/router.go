@@ -5,6 +5,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
 	_ "go-gin-example/docs"
+	"go-gin-example/pkg/export"
 	"go-gin-example/pkg/setting"
 	"go-gin-example/pkg/upload"
 	"go-gin-example/routers/api"
@@ -21,6 +22,7 @@ func InitRouter() *gin.Engine {
 
 	gin.SetMode(setting.ServerSetting.RunMode)
 	r.StaticFS("/upload/images", http.Dir(upload.GetImageFullPath()))
+	r.StaticFS("/export", http.Dir(export.GetExcelFullPath()))
 
 	r.GET("/auth", api.GetAuth)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -49,6 +51,8 @@ func InitRouter() *gin.Engine {
 		apiv1.POST("/articles", v1.AddArticle)
 		//导出标签
 		r.POST("/tags/export", v1.ExportTag)
+		//导入标签
+		r.POST("/tags/import", v1.ImportTag)
 	}
 	return r
 }
